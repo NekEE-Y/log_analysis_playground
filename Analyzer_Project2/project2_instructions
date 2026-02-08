@@ -1,0 +1,144 @@
+Project 2 — Service Health Analyzer (SRE-flavored)
+
+You’re building a tool that answers: “Is this service healthy right now?” based on logs.
+
+This is intentionally SRE-style: thresholds, time windows, and an exit code that could be used in CI/monitoring.
+
+Deliverable
+
+Create a script (new file or new folder in the same repo) that:
+
+Loads logs using your existing parser (reuse your parselogs()).
+
+Filters to WARN/ERROR (reuse your extraction function).
+
+Computes health per service over a time window.
+
+Prints a concise report.
+
+Returns an exit code:
+
+0 if all services are OK
+
+1 if any service is UNHEALTHY
+
+Inputs
+Log format (same as Project 1)
+
+Each valid log entry includes:
+
+timestamp (ISO 8601 string like 2026-02-08T10:14:33Z)
+
+level
+
+service
+
+message
+
+request_id (optional, ignored)
+
+If your current sample logs don’t match timestamp format perfectly, create a new sample_logs_v2.jsonl with timestamps that do. (You can generate it manually or by small helper code—your call.)
+
+Health rules
+
+For each service, compute within the selected window:
+
+Counts
+
+total events in window (all usable logs, not just warn/error)
+
+warn+error events in window
+
+error events in window
+
+Rates
+
+error_rate = errors / total
+
+signal_rate = (warn + errors) / total
+
+Classification (per service)
+
+Use these thresholds:
+
+OK
+error_rate < 0.02 and signal_rate < 0.05
+
+DEGRADED
+error_rate >= 0.02 or signal_rate >= 0.05
+but not meeting UNHEALTHY
+
+UNHEALTHY
+error_rate >= 0.10 or errors >= 5 (absolute count) in the window
+
+Yes, these thresholds are arbitrary—that’s fine. The point is learning the SRE pattern.
+
+Time window requirement
+
+Support one of these modes (pick the simpler one now):
+
+Mode 1 (recommended): “last N minutes”
+
+Set WINDOW_MINUTES = 60 as a constant at the top.
+
+Compute window end as the latest timestamp in the log file.
+
+Window start = end minus N minutes.
+
+This avoids “current time” dependency and makes your output deterministic for tests.
+
+Output format (acceptance criteria)
+
+Your script must print:
+
+Window start and end timestamps
+
+For each service (sorted by worst status first: UNHEALTHY, DEGRADED, OK):
+
+status
+
+total events
+
+warn count
+
+error count
+
+error_rate (as percentage with 1 decimal)
+
+top 1 message (most common) among warn/error for that service in the window
+
+Example shape (not exact formatting required):
+
+Window: 2026-02-08T09:00:00Z → 2026-02-08T10:00:00Z
+
+UNHEALTHY  auth   total=40 warn=3 error=7 error_rate=17.5% top="Invalid token"
+DEGRADED   api    total=50 warn=4 error=1 error_rate=2.0%  top="Latency high"
+OK         db     total=60 warn=0 error=0 error_rate=0.0%  top="—"
+
+Constraints
+
+Standard library only.
+
+Do not mutate raw log events (treat them as immutable evidence).
+
+Keep functions small and composable like Project 1.
+
+You may add helper functions (recommended).
+
+What I want you to send back
+
+When done, paste:
+
+Your new script (or the new functions you added)
+
+The console output when run on your sample_logs_v2.jsonl
+
+Where to start (first 20 minutes)
+
+Decide how you’ll parse timestamps (standard library can do it).
+
+Implement time-window filtering.
+
+Then compute totals and errors per service.
+
+Don’t jump to top messages first. Get the window + counts correct first.
